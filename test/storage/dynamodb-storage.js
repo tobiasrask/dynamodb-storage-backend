@@ -1,7 +1,6 @@
 import assert from "assert"
 import DynamoDBStorageBackend from "./../../src/index"
 
-
 describe('DynamoDB storage backend', () => {
 
   describe('Invalid construction', () => {
@@ -14,7 +13,6 @@ describe('DynamoDB storage backend', () => {
       done(new Error("It dint' throw error when DynamoDB instance is missing"));
     })
   });
-
 
   describe('Construction', () => {
     it('Should construct with without errors', done => {
