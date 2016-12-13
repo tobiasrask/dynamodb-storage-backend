@@ -1,5 +1,7 @@
 import assert from "assert"
 import DynamoDBStorageBackend from "./../../src/index"
+import util from 'util'
+import equal from 'deep-equal'
 
 describe('DynamoDB storage backend', () => {
 
@@ -20,6 +22,82 @@ describe('DynamoDB storage backend', () => {
       let backend = new DynamoDBStorageBackend({
         dynamodb: new DynamoDB()
       });
+      done();
+    })
+  });
+
+  describe('Data encoding & decoding', () => {
+    it('It should encode and decode json data do DynamoDB format', done => {
+      class DynamoDB {}
+      let backend = new DynamoDBStorageBackend({
+        dynamodb: new DynamoDB()
+      });
+
+      var sourceData = {
+        string_field: "stringValue",
+        array_field: [1, "stringValue", 3, true],
+        boolean_field: true,
+        null_field: null,
+        object_field: {
+          a: 1,
+          b: "stringValue",
+          c: [1,2,"stringValue"],
+          d: {
+            a: "stringValue"
+          }
+        }
+      };
+
+      const expectedData = {
+        string_field: {
+          S: 'stringValue'
+        },
+        array_field: {
+          L: [
+            { N: '1' },
+            { S: 'stringValue' },
+            { N: '3' },
+            { BOOL: true }
+          ]
+        },
+        boolean_field: {
+          BOOL: true
+        },
+        object_field: {
+          M: {
+            a: { N: '1' },
+            b: { S: 'stringValue' },
+            c: {
+              L: [
+                { N: '1' },
+                { N: '2' },
+                { S: 'stringValue' }
+              ]
+            },
+            d: {
+              M: {
+                a: {
+                  S: 'stringValue'
+                }
+              }
+            }
+          }
+        }
+      };
+
+      let encodedData = backend.encodeMap(sourceData);
+      //console.log(util.inspect(encodedData, false, null))
+      if (!equal(expectedData, encodedData))
+        return done(new Error("DynamoDB encoded data was not expected"));
+
+      let decodedData = backend.decodeMap(encodedData);
+
+      // Dynamodb doesn't support null values, so it removes them
+      delete sourceData['null_field'];
+
+      if (!equal(sourceData, decodedData))
+        return done(new Error("DynamoDB decoded data was not expected"));
+
       done();
     })
   });

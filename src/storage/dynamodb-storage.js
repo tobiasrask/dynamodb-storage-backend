@@ -147,18 +147,18 @@ class DynamoDBStorageBackend extends StorageBackend {
     if (Array.isArray(data)) {
       build = [];
       for (let i = 0; i < data.length; i++) {
-        result = this.encodeMapValues(data[i]);
+        result = self.encodeMapValues(data[i]);
         if (result != null)
           build.push(result)
       }
     } else if (typeof data === 'object') {
-      Object.keys(data).forEach(function(key, index) {
-        result = this.encodeMapValues(data[key]);
+      Object.keys(data).forEach((key, index) => {
+        result = self.encodeMapValues(data[key]);
         if (result != null)
           build[key] = result;
       });
     } else {
-      result = this.encodeMapValues(data);
+      result = self.encodeMapValues(data);
       if (result != null)
         build = result;
     }
