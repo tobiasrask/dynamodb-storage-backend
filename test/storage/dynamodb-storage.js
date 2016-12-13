@@ -1,7 +1,9 @@
 import assert from "assert"
 import DynamoDBStorageBackend from "./../../src/index"
+import { EntityStorageHandler } from "entity-api"
 import util from 'util'
 import equal from 'deep-equal'
+import AWS from 'aws-sdk'
 
 describe('DynamoDB storage backend', () => {
 
@@ -101,4 +103,49 @@ describe('DynamoDB storage backend', () => {
       done();
     })
   });
+
+  describe('loadEntityContainers', () => {
+    it('Should should load items as patch', done => {
+      let entityTypeId = 'test';
+
+      class DynamoDB {
+        batchGetItem(params, callback) {
+          let data = { Responses: {} };
+          Object.keys(params.RequestItems).forEach(tableName => {
+            data.Responses[tableName] = [
+              {
+                "entity_id": 123,
+                "name": "DynamoDB",
+                "age": "31"
+              }
+            ];
+            params.RequestItems[tableName]
+          });
+          callback(null, data);
+        }
+      };
+
+      let backend = new DynamoDBStorageBackend({
+        dynamodb: new DynamoDB()
+      });
+
+      class CustomHandler extends EntityStorageHandler {
+        getStorageIndexDefinitions() {
+          return [{ fieldName: "entity_id" }];
+        }
+      }
+
+      let handler = new CustomHandler({
+        entityTypeId: entityTypeId,
+        storage: backend
+      });
+
+      backend.loadEntityContainers(["123"], (err, result) => {
+        if (err)
+          return done(err);
+        done();
+      });
+    })
+  });
+
 });

@@ -1,5 +1,5 @@
 import DomainMap from 'domain-map'
-import { StorageBackend } from "entity-api"
+import EntitySystem, { StorageBackend } from "entity-api"
 
 /**
 * Simple memory storage backend.
@@ -33,6 +33,8 @@ class DynamoDBStorageBackend extends StorageBackend {
   * Load entity content container for entity data. DynamoDB supports only
   * fetching items in batches size of 100 items.
   *
+  * TODO: Support throttling
+  *
   * @param ids
   *   Array of entity ids.
   * @param callback
@@ -41,16 +43,14 @@ class DynamoDBStorageBackend extends StorageBackend {
   */
   loadEntityContainers(ids, callback) {
     var self = this;
-    let result = DomainMap.createCollection({strictKeyMode: false});
-
+    let result = DomainMap.createCollection({ strictKeyMode: false });
     let pointer = 0;
     let maxItems = 100;
-    let tableName = this.getEntityTableName();
+    let tableName = this.getStorageTableName();
     let countBatches = Math.ceil(ids.length / maxItems);
-
     let dynamodb = this._registry.get("properties", 'dynamodb');
+    let indexeDefinitions = this.getStorageIndexDefinitions();
 
-    // Load batch data
     function loadBatchData(keys) {
       let params = { RequestItems: {} };
       params.RequestItems[tableName] = {
@@ -61,45 +61,40 @@ class DynamoDBStorageBackend extends StorageBackend {
         if (err) return callback(err)
 
         // Process data
-        Object.keys(data.Responses).forEach(table => {
-          Object.keys(data.Responses[table]).forEach(row => {
-            let rowData = self.processDynamoDBResponse(row);
+        Object.keys(data.Responses).forEach(tableName => {
+          // Do not process empty reponses;
+          if (!Array.isArray(data.Responses[tableName]))
+            return;
+
+          data.Responses[tableName].forEach(rowData => {
+            let data = self.decodeMap(rowData);
             // TODO: Get entity id dynamically...
-            let entityId = rowData;
-            result.set(entityId, rowData);
+            let entityId = self.getStorageHandler().extractEntityId(indexeDefinitions, data);
+            result.set(entityId, data);
           })
         });
 
-        self.getBatch();
+        getBatch();
       });
     }
 
-    // Fetch batch
-    // TODO: Support dynamical keys names
-    // TODO: Support throttling
-    function getBatch(keys = []) {
-      if (ids.length == ids.length)
+    function getBatch() {
+      if (pointer == ids.length)
         return callback(null, result)
 
+      let keys = [];
       while (pointer < ids.length && keys.length < maxItems) {
         keys.push({
           entity_id: {
-            S: ids[i]
+            S: ids[pointer]
           }
         });
         pointer++;
       }
+      loadBatchData(keys)
     }
-  }
 
-  /**
-  * Process dynamodb response object.
-  *
-  * @param row
-  * @return data
-  */
-  processDynamoDBResponse(row) {
-
+    getBatch();
   }
 
   /**
@@ -125,10 +120,18 @@ class DynamoDBStorageBackend extends StorageBackend {
   *
   * @return storage domain
   */
-  getEntityTableName() {
+  getStorageTableName() {
     return this.getStorageHandler().getStorageTableName();
   }
 
+  /**
+  * Return storege domain.
+  *
+  * @return storage domain
+  */
+  getStorageIndexDefinitions() {
+    return this.getStorageHandler().getStorageIndexDefinitions();
+  }
 
   /**
   * Encode json object to DynamoDB map data structure.
@@ -246,6 +249,68 @@ class DynamoDBStorageBackend extends StorageBackend {
   }
 
   /**
+  * Select data from storage.
+  *
+  * @param variables
+  * @param callback
+  */
+  select(variables, callback) {
+    var self = this;
+    var query = this.buildSelectQuery(variables);
+    self.executeSelectQuery(variables, query, (err, result) => {
+      if (err) callback(err);
+      else callback(null, result);
+    })
+  }
+
+  /**
+  * Build select parameters
+  *
+  * @param variables with following keys
+  *   - query
+  * @return params
+  */
+  buildSelectQuery(variables) {
+    var self = this;
+
+    let query = variables.hasOwnProperty('query') ? variables.query : {};
+
+    // Fill basic values
+    if (!query.hasOwnProperty('TableName'))
+      query.TableName = this.getStorageTableName();
+
+    return query;
+  }
+
+  /**
+  * Execute query
+  *
+  * @param variables
+  * @param query
+  * @param callback
+  */
+  executeSelectQuery(variables, query, callback) {
+    var self = this;
+
+    let dynamodb = this._registry.get("properties", 'dynamodb');
+
+    var resultHandler = (err, data) =>  {
+      if (err)
+        return callback(err);
+
+      callback(null, data);
+    };
+
+    if (variables.method == 'scan') {
+      dynamodb.scan(query, resultHandler);
+    } else if (variables.method == 'query') {
+      dynamodb.query(query, resultHandler);
+    } else {
+      callback(new Error(`Unknown method: ${variables.method}`));
+    }
+  }
+
+  /**
   * Method returns dynamo type for primitive data types
   * or javascript ovalues.
   *
@@ -283,6 +348,19 @@ class DynamoDBStorageBackend extends StorageBackend {
 
     return dynamoType && DynamoTypeMap.hasOwnProperty(dynamoType) ?
       DynamoTypeMap[dynamoType] : false;
+  }
+
+  /**
+  * Method checks if entity table exists.
+  *
+  * @param callback
+  */
+  checkStorageTableStatus(callback) {
+    let dynamodb = this._registry.get("properties", 'dynamodb');
+    dynamodb.listTables({}, function(err, data) {
+      if (err) console.log(err, err.stack); // an error occurred
+      else     console.log(data);           // successful response
+    });
   }
 
 }
