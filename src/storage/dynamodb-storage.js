@@ -363,6 +363,11 @@ class DynamoDBStorageBackend extends StorageBackend {
     });
   }
 
+  // TODO:
+  // Table creation
+  // Save entity
+  // Delete entity
+  // Update entity
 }
 
 export default DynamoDBStorageBackend;
