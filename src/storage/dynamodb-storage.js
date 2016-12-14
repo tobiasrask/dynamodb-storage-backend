@@ -1,6 +1,10 @@
 import DomainMap from 'domain-map'
 import EntitySystem, { StorageBackend } from "entity-api"
 
+// TODO:
+// Table status, install, update, uninstall
+// Entity CRUDi operations
+
 /**
 * Simple memory storage backend.
 */
@@ -351,23 +355,184 @@ class DynamoDBStorageBackend extends StorageBackend {
   }
 
   /**
-  * Method checks if entity table exists.
+  * Returns list of DynamoDB tabls installed.
   *
-  * @param callback
+  * @param callback
   */
-  checkStorageTableStatus(callback) {
+  getDynamoDBTables(callback) {
     let dynamodb = this._registry.get("properties", 'dynamodb');
     dynamodb.listTables({}, function(err, data) {
-      if (err) console.log(err, err.stack); // an error occurred
-      else     console.log(data);           // successful response
+      if (err) callback(err)
+      else callback(null, data);
     });
   }
 
-  // TODO:
-  // Table creation
-  // Save entity
-  // Delete entity
-  // Update entity
+  /**
+  * Method checks if given table exists.
+  *
+  * @param tableName
+  * @param callback
+  */
+  checkStorageTableStatus(tableName, callback) {
+    this.getDynamoDBTables((err, result) => {
+      if (err)
+        return callback(err);
+      else if (result.TableNames.find(item => item == tableName))
+        callback(null, true);
+      else
+        callback(null, false);
+    })
+  }
+
+  /**
+  * Install schema
+  *
+  * @param scema
+  *   Install one or more schemas
+  * @param options
+  * @param callback
+  */
+  installSchemas(schemas, options, callback) {
+    let self = this;
+    let counter = schemas.length;
+    let errors = false;
+
+    if (!counter)
+      return callback(null);
+
+    schemas.forEach(schema => {
+      EntitySystem.log("DynamoDBStorageBackend", `Creating table: ${schema.TableName}`);
+
+      self.installSchema(schema, options, (err, succeed) => {
+        if (err) {
+          EntitySystem.log("DynamoDBStorageBackend", err.toString(), 'error');
+          errors = true;
+        } else if (succeed) {
+          EntitySystem.log("DynamoDBStorageBackend", `Table created: ${schema.TableName}`);
+        } else {
+          EntitySystem.log("DynamoDBStorageBackend", `Table not created, already exists: ${schema.TableName}`);
+        }
+
+        counter--;
+        if (counter > 0)
+          return;
+        else if (errors)
+          callback(new Error("There was an error when installing schemas."));
+        else
+          callback(null);
+      });
+    });
+  }
+
+  /**
+  * Install schema.
+  *
+  * @param schema
+  * @param options
+  * @param callback
+  *   Provides errors and creation status
+  */
+  installSchema(schema, options, callback) {
+    if (!schema.hasOwnProperty('TableName'))
+      return callback(new Error("Missing required 'TableName' field"));
+
+    this.checkStorageTableStatus(schema.TableName, (err, tableExists) => {
+      if (err)
+        return callback(err);
+
+      // Skip table creation if table already exists
+      if (tableExists)
+        return callback(null, false);
+
+      let dynamodb = this._registry.get("properties", 'dynamodb');
+
+      dynamodb.createTable(schema, (err, data) => {
+        if (err) callback(err);
+        else callback(null, true)
+      });
+    });
+  }
+
+  /**
+  * Update schema
+  *
+  * @param scema
+  *   Install one or more schemas
+  * @param options
+  * @param callback
+  */
+  updateSchemas(schemas, options, callback) {
+    callback(null);
+  }
+
+  /**
+  * Uninstall schema
+  *
+  * @param scema
+  *   Install one or more schemas
+  * @param options
+  * @param callback
+  */
+  uninstallSchemas(schemas, options, callback) {
+    let self = this;
+    let counter = schemas.length;
+    let errors = false;
+
+    if (!counter)
+      return callback(null);
+
+    schemas.forEach(schema => {
+      EntitySystem.log("DynamoDBStorageBackend", `Deleting table: ${schema.TableName}`);
+
+      self.uninstallSchema(schema, options, (err, succeed) => {
+        if (err) {
+          EntitySystem.log("DynamoDBStorageBackend", err.toString(), 'error');
+          errors = true;
+        } else if (succeed) {
+          EntitySystem.log("DynamoDBStorageBackend", `Table deleted: ${schema.TableName}`);
+        } else {
+          EntitySystem.log("DynamoDBStorageBackend", `Table not deleted, might be it didn't exists: ${schema.TableName}`);
+        }
+
+        counter--;
+        if (counter > 0)
+          return;
+        else if (errors)
+          callback(new Error("There was an error when uninstalling schemas."));
+        else
+          callback(null);
+      });
+    });
+  }
+
+  /**
+  * Uninstall schema.
+  *
+  * @param schema
+  * @param options
+  * @param callback
+  *   Provides errors and creation status
+  */
+  uninstallSchema(schema, options, callback) {
+    if (!schema.hasOwnProperty('TableName'))
+      return callback(new Error("Missing required 'TableName' field"));
+
+    this.checkStorageTableStatus(schema.TableName, (err, tableExists) => {
+      if (err)
+        return callback(err);
+
+      // Skip table deletion if it doesn't exists
+      if (!tableExists)
+        return callback(null, false);
+
+      let dynamodb = this._registry.get("properties", 'dynamodb');
+
+      dynamodb.deleteTable({ TableName: schema.TableName }, (err, data) => {
+        if (err) callback(err);
+        else callback(null, true)
+      });
+    });
+  }
 }
 
 export default DynamoDBStorageBackend;
