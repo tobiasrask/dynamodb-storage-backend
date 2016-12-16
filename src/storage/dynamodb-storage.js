@@ -34,30 +34,108 @@ class DynamoDBStorageBackend extends StorageBackend {
   }
 
   /**
+  * Load entity content container for entity data.
+  *
+  * @param id
+  *   entity id data
+  * @param callback
+  */
+  loadEntityContainer(entityId, callback) {
+    var self = this;
+    let tableName = this.getStorageTableName();
+    this.loadDataItem(tableName, entityId, callback);
+  }
+
+  /**
   * Load entity content container for entity data. DynamoDB supports only
   * fetching items in batches size of 100 items.
   *
   * TODO: Support throttling
   *
-  * @param ids
+  * @param keys
   *   Array of entity ids.
   * @param callback
-  *   Passes map of objects keyed with existing entity id. If entity doesn't
-  *   exists, it will not be indexed.
   */
-  loadEntityContainers(ids, callback) {
+  loadEntityContainers(entityIds, callback) {
+    var self = this;
+    let tableName = this.getStorageTableName();
+    this.loadDataItems(tableName, entityIds, callback);
+  }
+
+  /**
+  * Save entity content container.
+  *
+  * @param entityId
+  *   Entity id
+  * @param container
+  *   Container data
+  * @param caallback
+  */
+  saveEntityContainer(entityId, container, callback) {
+    this.saveDataItem(this.getStorageTableName(), Object.assign({}, entityId, container), callback);
+  }
+
+  /**
+  * Save data to DynamoDB.
+  *
+  * @param table
+  * @param data
+  * @param callback
+  */
+  saveDataItem(table, data, callback) {
+    let dynamodb = this._registry.get("properties", 'dynamodb');
+    let params = {
+      TableName: table,
+      Item: this.encodeMap(data)
+    }
+    dynamodb.putItem(params, (err, result) => {
+      // TODO: Handle throttling
+      // TODO: Handle eventually consisency issues...
+      callback(err, result);
+    })
+  }
+
+  /**
+  * Load data items.
+  *
+  * @param table
+  * @param key data
+  * @param callback
+  */
+  loadDataItem(table, itemKey, callback) {
+    let dynamodb = this._registry.get("properties", 'dynamodb');
+    let params = {
+      TableName: table,
+      Key: this.encodeMap(itemKey)
+    }
+    // TODO: Handle throttling
+    // TODO: Handle eventually consisency issues...
+    dynamodb.getItem(params, (err, result) => {
+      callback(err, this.decodeMap(result.Item));
+    })
+  }
+
+  /**
+  * Load batch of data items.
+  *
+  * @param table
+  * @param ids
+  *   Array of key data
+  * @param callback
+  *   Data collection
+  */
+  loadDataItems(table, itemKeys, callback) {
     var self = this;
     let result = DomainMap.createCollection({ strictKeyMode: false });
-    let pointer = 0;
-    let maxItems = 100;
-    let tableName = this.getStorageTableName();
-    let countBatches = Math.ceil(ids.length / maxItems);
-    let dynamodb = this._registry.get("properties", 'dynamodb');
+    let countBatches = Math.ceil(itemKeys.length / maxItems);
     let indexeDefinitions = this.getStorageIndexDefinitions();
+    let dynamodb = this._registry.get("properties", 'dynamodb');
+    let maxItems = 100;
+    let pointer = 0;
 
     function loadBatchData(keys) {
       let params = { RequestItems: {} };
-      params.RequestItems[tableName] = {
+      params.RequestItems[table] = {
         Keys: keys
       };
 
@@ -83,40 +161,17 @@ class DynamoDBStorageBackend extends StorageBackend {
     }
 
     function getBatch() {
-      if (pointer == ids.length)
-        return callback(null, result)
-
       let keys = [];
-      while (pointer < ids.length && keys.length < maxItems) {
-        keys.push({
-          entity_id: {
-            S: ids[pointer]
-          }
-        });
+      if (pointer == itemKeys.length)
+        return callback(null, result)
+      while (pointer < itemKeys.length && keys.length < maxItems) {
+        keys.push(self.encodeMap(itemKeys[pointer]));
         pointer++;
       }
       loadBatchData(keys)
     }
 
     getBatch();
-  }
-
-  /**
-  * Save entity content container.
-  *
-  * @param entityId
-  *   Entity id
-  * @param container
-  *   Container data
-  * @param caallback
-  */
-  saveEntityContainer(entityId, container, callback) {
-    if (this.isStorageLocked())
-      return callback(new Error("Storage updates are locked"));
-
-    let domain = this.getStorageDomain();
-    this._registry.set(domain, entityId, container);
-    callback(null);
   }
 
   /**

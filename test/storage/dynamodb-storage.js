@@ -88,7 +88,7 @@ describe('DynamoDB storage backend', () => {
       };
 
       let encodedData = backend.encodeMap(sourceData);
-      //console.log(util.inspect(encodedData, false, null))
+
       if (!equal(expectedData, encodedData))
         return done(new Error("DynamoDB encoded data was not expected"));
 
@@ -105,7 +105,7 @@ describe('DynamoDB storage backend', () => {
   });
 
   describe('loadEntityContainers', () => {
-    it('Should should load items as patch', done => {
+    it('Should should items as patch', done => {
       let entityTypeId = 'test';
 
       class DynamoDB {
@@ -140,7 +140,7 @@ describe('DynamoDB storage backend', () => {
         storage: backend
       });
 
-      backend.loadEntityContainers(["123"], (err, result) => {
+      backend.loadEntityContainers([{ entity_id: 123 }], (err, result) => {
         if (err)
           return done(err);
         done();
