@@ -1,8 +1,8 @@
-import assert from "assert"
 import DynamoDBStorageBackend from "./../../src/index"
 import { EntityStorageHandler } from "entity-api"
-import util from 'util'
+import assert from "assert"
 import equal from 'deep-equal'
+import util from 'util'
 import AWS from 'aws-sdk'
 
 const DB_SCHEMA = [
