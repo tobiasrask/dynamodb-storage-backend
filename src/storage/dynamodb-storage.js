@@ -8,7 +8,7 @@ import EntitySystem, { StorageBackend } from "entity-api"
 /**
 * Simple memory storage backend.
 */
-class DynamoDBStorageBackend extends StorageBackend {
+class DDBStorageBackend extends StorageBackend {
 
   /**
   * Construct
@@ -142,20 +142,17 @@ class DynamoDBStorageBackend extends StorageBackend {
       dynamodb.batchGetItem(params, (err, data) => {
         if (err) return callback(err)
 
-        // Process data
         Object.keys(data.Responses).forEach(tableName => {
-          // Do not process empty reponses;
           if (!Array.isArray(data.Responses[tableName]))
             return;
 
           data.Responses[tableName].forEach(rowData => {
             let data = self.decodeMap(rowData);
-            // TODO: Get entity id dynamically...
-            let entityId = self.getStorageHandler().extractEntityId(indexeDefinitions, data);
+            let entityId = self.getStorageHandler()
+              .extractEntityId(indexeDefinitions, data);
             result.set(entityId, data);
           })
         });
-
         getBatch();
       });
     }
@@ -308,7 +305,8 @@ class DynamoDBStorageBackend extends StorageBackend {
   }
 
   /**
-  * Select data from storage.
+  * Select data from storage. If query doesn't contain table name, we will
+  * populate table name to match entity specs.
   *
   * @param variables
   * @param callback
@@ -359,6 +357,9 @@ class DynamoDBStorageBackend extends StorageBackend {
 
       callback(null, data);
     };
+
+    if (variables.hasOwnProperty('debug') && variables.debug)
+      EntitySystem.log("DDBStorageBackend", `Creating table: ${schema.TableName}`);
 
     if (variables.method == 'scan') {
       dynamodb.scan(query, resultHandler);
@@ -456,16 +457,16 @@ class DynamoDBStorageBackend extends StorageBackend {
       return callback(null);
 
     schemas.forEach(schema => {
-      EntitySystem.log("DynamoDBStorageBackend", `Creating table: ${schema.TableName}`);
+      EntitySystem.log("DDBStorageBackend", `Creating table: ${schema.TableName}`);
 
       self.installSchema(schema, options, (err, succeed) => {
         if (err) {
-          EntitySystem.log("DynamoDBStorageBackend", err.toString(), 'error');
+          EntitySystem.log("DDBStorageBackend", err.toString(), 'error');
           errors = true;
         } else if (succeed) {
-          EntitySystem.log("DynamoDBStorageBackend", `Table created: ${schema.TableName}`);
+          EntitySystem.log("DDBStorageBackend", `Table created: ${schema.TableName}`);
         } else {
-          EntitySystem.log("DynamoDBStorageBackend", `Table not created, already exists: ${schema.TableName}`);
+          EntitySystem.log("DDBStorageBackend", `Table not created, already exists: ${schema.TableName}`);
         }
 
         counter--;
@@ -537,16 +538,16 @@ class DynamoDBStorageBackend extends StorageBackend {
       return callback(null);
 
     schemas.forEach(schema => {
-      EntitySystem.log("DynamoDBStorageBackend", `Deleting table: ${schema.TableName}`);
+      EntitySystem.log("DDBStorageBackend", `Deleting table: ${schema.TableName}`);
 
       self.uninstallSchema(schema, options, (err, succeed) => {
         if (err) {
-          EntitySystem.log("DynamoDBStorageBackend", err.toString(), 'error');
+          EntitySystem.log("DDBStorageBackend", err.toString(), 'error');
           errors = true;
         } else if (succeed) {
-          EntitySystem.log("DynamoDBStorageBackend", `Table deleted: ${schema.TableName}`);
+          EntitySystem.log("DDBStorageBackend", `Table deleted: ${schema.TableName}`);
         } else {
-          EntitySystem.log("DynamoDBStorageBackend", `Table not deleted, might be it didn't exists: ${schema.TableName}`);
+          EntitySystem.log("DDBStorageBackend", `Table not deleted, might be it didn't exists: ${schema.TableName}`);
         }
 
         counter--;
@@ -590,4 +591,4 @@ class DynamoDBStorageBackend extends StorageBackend {
   }
 }
 
-export default DynamoDBStorageBackend;
+export default DDBStorageBackend;
