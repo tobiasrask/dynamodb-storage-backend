@@ -359,7 +359,7 @@ class DDBStorageBackend extends StorageBackend {
     };
 
     if (variables.hasOwnProperty('debug') && variables.debug)
-      EntitySystem.log("DDBStorageBackend", `Creating table: ${schema.TableName}`);
+      EntitySystem.log("DDBStorageBackend", JSON.stringify(query));
 
     if (variables.method == 'scan') {
       dynamodb.scan(query, resultHandler);
