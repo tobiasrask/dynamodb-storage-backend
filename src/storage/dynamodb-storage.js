@@ -348,13 +348,11 @@ class DDBStorageBackend extends StorageBackend {
   */
   executeSelectQuery(variables, query, callback) {
     var self = this;
-
     let dynamodb = this._registry.get("properties", 'dynamodb');
-
     var resultHandler = (err, data) =>  {
       if (err)
         return callback(err);
-
+      data.values = self.decodeMap(data.Items);
       callback(null, data);
     };
 
