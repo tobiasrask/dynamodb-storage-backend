@@ -76,6 +76,17 @@ class DDBStorageBackend extends StorageBackend {
   }
 
   /**
+  * Delete entity content container.
+  *
+  * @param entityId
+  *   Entity id
+  * @param callback
+  */
+  deleteEntityContainer(entityId, callback) {
+    this.deleteDataItem(this.getStorageTableName(), entityId, callback);
+  }
+
+  /**
   * Save data to DynamoDB.
   *
   * @param table
@@ -111,6 +122,26 @@ class DDBStorageBackend extends StorageBackend {
     // TODO: Handle throttling
     // TODO: Handle eventually consisency issues...
     dynamodb.getItem(params, (err, result) => {
+      callback(err, this.decodeMap(result.Item));
+    })
+  }
+
+  /**
+  * Delete data item.
+  *
+  * @param table
+  * @param key data
+  * @param callback
+  */
+  deleteDataItem(table, itemKey, callback) {
+    let dynamodb = this._registry.get("properties", 'dynamodb');
+    let params = {
+      TableName: table,
+      Key: this.encodeMap(itemKey)
+    }
+    // TODO: Handle throttling
+    // TODO: Handle eventually consisency issues...
+    dynamodb.deleteItem(params, (err, result) => {
       callback(err, this.decodeMap(result.Item));
     })
   }

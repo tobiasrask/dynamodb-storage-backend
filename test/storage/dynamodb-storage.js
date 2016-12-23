@@ -105,7 +105,7 @@ describe('DynamoDB storage backend', () => {
   });
 
   describe('loadEntityContainers', () => {
-    it('Should should items as patch', done => {
+    it('Should load items as patch', done => {
       let entityTypeId = 'test';
 
       class DynamoDB {

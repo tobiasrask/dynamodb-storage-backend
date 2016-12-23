@@ -146,15 +146,32 @@ describe('DynamoDB schema maneuvers', () => {
         fieldC: '789'
       }
       let testItem = Object.assign({}, itemKey, fields);
+
       backend.saveEntityContainer(itemKey, fields, err => {
         if (err)
           return done(err);
+
         backend.loadEntityContainer(itemKey, (err, container) => {
           if (err)
             return done(err);
-          if (!equal(testItem,container))
+
+          if (!equal(testItem, container))
             return done("Loaded DynamoDB container is not expected.");
-          done();
+
+          backend.deleteEntityContainer(itemKey, (err, result)=> {
+            if (err)
+              return done(err);
+
+            backend.loadEntityContainer(itemKey, (err, container) => {
+              if (err)
+                return done(err);
+
+              if (container)
+                done(new Error("It didn't delete entity container"));
+              else
+                done();
+            });
+          })
         });
       });
     })
