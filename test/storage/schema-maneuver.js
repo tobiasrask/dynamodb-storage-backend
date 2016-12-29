@@ -100,6 +100,7 @@ class CustomStorageHandler extends EntityStorageHandler {
 
 describe('DynamoDB schema maneuvers', () => {
   describe('Schema installation', () => {
+
     it('It should install schemas', done => {
       let entityTypeId = 'test';
       AWS.config.update({
@@ -123,7 +124,7 @@ describe('DynamoDB schema maneuvers', () => {
   });
 
   describe('Schema storage', () => {
-    it('It should save and load data from schema tables', done => {
+    it('It should save, load and delete data from schema tables', done => {
       let entityTypeId = 'test';
       AWS.config.update({
         region: 'eu-west1'

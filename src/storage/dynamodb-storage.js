@@ -26,11 +26,20 @@ class DDBStorageBackend extends StorageBackend {
     if (variables.hasOwnProperty('lockUpdates'))
       this.setStorageLock(variables.lockUpdates);
 
-    // Apply dynamodb endpoint
     if (!variables.hasOwnProperty('dynamodb'))
       throw new Error("DynamoDB instance must be provided");
 
     this._registry.set("properties", 'dynamodb', variables.dynamodb);
+  }
+
+
+  /**
+  * Returns assigned DynamoDB Instance.
+  *
+  * @return instance
+  */
+  getDynamoDBInstance() {
+    return this._registry.get("properties", 'dynamodb');
   }
 
   /**
@@ -94,12 +103,11 @@ class DDBStorageBackend extends StorageBackend {
   * @param callback
   */
   saveDataItem(table, data, callback) {
-    let dynamodb = this._registry.get("properties", 'dynamodb');
     let params = {
       TableName: table,
       Item: this.encodeMap(data)
     }
-    dynamodb.putItem(params, (err, result) => {
+    this.getDynamoDBInstance().putItem(params, (err, result) => {
       // TODO: Handle throttling
       // TODO: Handle eventually consisency issues...
       callback(err, result);
@@ -114,14 +122,13 @@ class DDBStorageBackend extends StorageBackend {
   * @param callback
   */
   loadDataItem(table, itemKey, callback) {
-    let dynamodb = this._registry.get("properties", 'dynamodb');
     let params = {
       TableName: table,
       Key: this.encodeMap(itemKey)
     }
     // TODO: Handle throttling
     // TODO: Handle eventually consisency issues...
-    dynamodb.getItem(params, (err, result) => {
+    this.getDynamoDBInstance().getItem(params, (err, result) => {
       callback(err, this.decodeMap(result.Item));
     })
   }
@@ -134,14 +141,13 @@ class DDBStorageBackend extends StorageBackend {
   * @param callback
   */
   deleteDataItem(table, itemKey, callback) {
-    let dynamodb = this._registry.get("properties", 'dynamodb');
     let params = {
       TableName: table,
       Key: this.encodeMap(itemKey)
     }
     // TODO: Handle throttling
     // TODO: Handle eventually consisency issues...
-    dynamodb.deleteItem(params, (err, result) => {
+    this.getDynamoDBInstance().deleteItem(params, (err, result) => {
       callback(err, this.decodeMap(result.Item));
     })
   }
@@ -160,7 +166,6 @@ class DDBStorageBackend extends StorageBackend {
     let result = DomainMap.createCollection({ strictKeyMode: false });
     let countBatches = Math.ceil(itemKeys.length / maxItems);
     let indexeDefinitions = this.getStorageIndexDefinitions();
-    let dynamodb = this._registry.get("properties", 'dynamodb');
     let maxItems = 100;
     let pointer = 0;
 
@@ -170,7 +175,7 @@ class DDBStorageBackend extends StorageBackend {
         Keys: keys
       };
 
-      dynamodb.batchGetItem(params, (err, data) => {
+      self.getDynamoDBInstance().batchGetItem(params, (err, data) => {
         if (err) return callback(err)
 
         Object.keys(data.Responses).forEach(tableName => {
@@ -203,12 +208,21 @@ class DDBStorageBackend extends StorageBackend {
   }
 
   /**
-  * Return storege domain.
+  * Return storege domain defined by storage handler.
   *
   * @return storage domain
   */
   getStorageTableName() {
     return this.getStorageHandler().getStorageTableName();
+  }
+
+  /**
+  * Returns prefix for table defined by storage handler.
+  *
+  * @return storage domain
+  */
+  getStorageTablePrefix() {
+    return this.getStorageHandler().getStorageTablePrefix();
   }
 
   /**
