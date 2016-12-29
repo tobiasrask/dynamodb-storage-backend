@@ -27,11 +27,11 @@ class DynamoDBStorageHandler extends EntityStorageHandler {
   * Hook getSchemas()
   */
   getSchemas() {
-    return [].concat(this._registry.get('properties', 'schemaData', [])).map(data => {
+    return this._registry.get('properties', 'schemaData', []).map(data => {
       if (!data.hasOwnProperty('schema'))
         return;
 
-      let schema = data.schema;
+      let schema = Object.assign({}, data.schema);
 
       if (!schema.hasOwnProperty('TableName') || !schema.TableName)
         schema.TableName = this.getStorageTableName();

@@ -4,102 +4,127 @@ import equal from 'deep-equal'
 import util from 'util'
 import AWS from 'aws-sdk'
 
-const DB_SCHEMA = [
+const DB_SCHEMAS = [
   {
-    TableName: '',
-    AttributeDefinitions: [
-      {
-        AttributeName: "entity_id",
-        AttributeType: "S"
-      },
-      {
-        AttributeName: "testfield",
-        AttributeType: "S"
-      },
-      {
-        AttributeName: "numberfield",
-        AttributeType: "N"
-      }
-    ],
-    KeySchema: [
-      {
-        AttributeName: "entity_id",
-        KeyType: "HASH"
-      }
-    ],
-    ProvisionedThroughput:  {
-      ReadCapacityUnits: "1",
-      WriteCapacityUnits: "1"
-    },
-    GlobalSecondaryIndexes: [
-      {
-        IndexName: "testIndex",
-        KeySchema: [
-          {
-            AttributeName: "testfield",
-            KeyType: "HASH",
-          },
-          {
-            AttributeName: "numberfield",
-            KeyType: "RANGE",
-          }
-        ],
-        Projection: {
-          ProjectionType: "KEYS_ONLY"
+    schema:  {
+      TableName: '',
+      AttributeDefinitions: [
+        {
+          AttributeName: "entity_id",
+          AttributeType: "S"
         },
-        ProvisionedThroughput: {
-          ReadCapacityUnits: 1,
-          WriteCapacityUnits: 1
+        {
+          AttributeName: "testfield",
+          AttributeType: "S"
+        },
+        {
+          AttributeName: "numberfield",
+          AttributeType: "N"
         }
-      }
-    ]
+      ],
+      KeySchema: [
+        {
+          AttributeName: "entity_id",
+          KeyType: "HASH"
+        }
+      ],
+      ProvisionedThroughput:  {
+        ReadCapacityUnits: "1",
+        WriteCapacityUnits: "1"
+      },
+      GlobalSecondaryIndexes: [
+        {
+          IndexName: "testIndex",
+          KeySchema: [
+            {
+              AttributeName: "testfield",
+              KeyType: "HASH",
+            },
+            {
+              AttributeName: "numberfield",
+              KeyType: "RANGE",
+            }
+          ],
+          Projection: {
+            ProjectionType: "KEYS_ONLY"
+          },
+          ProvisionedThroughput: {
+            ReadCapacityUnits: 1,
+            WriteCapacityUnits: 1
+          }
+        }
+      ]
+    }
   },
   {
-    TableName: "_schema_test_custom_table",
-    AttributeDefinitions: [
-      {
-        AttributeName: "testfield",
-        AttributeType: "S"
-      },
-      {
-        AttributeName: "numberfield",
-        AttributeType: "N"
+    schema: {
+      TableName: "_schema_test_custom_table",
+      AttributeDefinitions: [
+        {
+          AttributeName: "testfield",
+          AttributeType: "S"
+        },
+        {
+          AttributeName: "numberfield",
+          AttributeType: "N"
+        }
+      ],
+      KeySchema: [
+        {
+          AttributeName: "testfield",
+          KeyType: "HASH",
+        },
+        {
+          AttributeName: "numberfield",
+          KeyType: "RANGE",
+        }
+      ],
+      ProvisionedThroughput:  {
+        ReadCapacityUnits: "1",
+        WriteCapacityUnits: "1"
       }
-    ],
-    KeySchema: [
-      {
-        AttributeName: "testfield",
-        KeyType: "HASH",
-      },
-      {
-        AttributeName: "numberfield",
-        KeyType: "RANGE",
-      }
-    ],
-    ProvisionedThroughput:  {
-      ReadCapacityUnits: "1",
-      WriteCapacityUnits: "1"
     }
   }
 ];
 
 class CustomStorageHandler extends DynamoDBStorageHandler {
+  constructor(variables) {
+    variables.schemaData = DB_SCHEMAS;
+    super(variables)
+  }
   getStorageTableName() {
     return '_schema_test';
   }
   getStorageIndexDefinitions() {
     return [{ fieldName: "entity_id" }];
   }
-  getSchemas() {
-    let schema = DB_SCHEMA;
-    schema[0]['TableName'] = this.getStorageTableName();
-    return schema;
-  }
 }
 
 describe('DynamoDB schema maneuvers', () => {
-  describe('Schema installation', () => {
+  describe('Schema uninstallation', () => {
+    it('It should uninstall schemas if exists', done => {
+      let entityTypeId = 'test';
+      AWS.config.update({
+        region: 'eu-west1'
+      });
+      let backend = new DynamoDBStorageBackend({
+        dynamodb: new AWS.DynamoDB({
+          endpoint: new AWS.Endpoint("http://localhost:8000")
+        })
+      });
+      let handler = new CustomStorageHandler({
+        entityTypeId: entityTypeId,
+        storage: backend
+      });
+      handler.uninstall()
+      .then(result => {
+        done();
+      })
+      .catch(done);
+    })
+  });
 
+  describe('Schema installation', () => {
     it('It should install schemas', done => {
       let entityTypeId = 'test';
       AWS.config.update({
