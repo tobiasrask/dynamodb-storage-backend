@@ -1,14 +1,9 @@
-import DynamoDBStorageBackend from "./../../src/index"
+import { DynamoDBStorageBackend, DynamoDBStorageHandler } from "./../../src/index"
 import { EntityStorageHandler } from "entity-api"
 import assert from "assert"
 import equal from 'deep-equal'
 import util from 'util'
 import AWS from 'aws-sdk'
-
-
-class CustomStorageHandler extends EntityStorageHandler {
-
-}
 
 describe('Storage backend methods', () => {
   describe('Test methods provided DynamoDB storage backend.', () => {
@@ -25,7 +20,7 @@ describe('Storage backend methods', () => {
           endpoint: new AWS.Endpoint("http://localhost:8000")
         })
       });
-      let handler = new CustomStorageHandler({
+      let handler = new DynamoDBStorageHandler({
         entityTypeId: entityTypeId,
         storage: backend,
         tablePrefix: tablePrefix

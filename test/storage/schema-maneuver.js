@@ -1,5 +1,4 @@
-import DynamoDBStorageBackend from "./../../src/index"
-import { EntityStorageHandler } from "entity-api"
+import { DynamoDBStorageBackend, DynamoDBStorageHandler } from "./../../src/index"
 import assert from "assert"
 import equal from 'deep-equal'
 import util from 'util'
@@ -84,7 +83,7 @@ const DB_SCHEMA = [
   }
 ];
 
-class CustomStorageHandler extends EntityStorageHandler {
+class CustomStorageHandler extends DynamoDBStorageHandler {
   getStorageTableName() {
     return '_schema_test';
   }
