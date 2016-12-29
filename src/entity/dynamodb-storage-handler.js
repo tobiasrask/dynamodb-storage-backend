@@ -28,13 +28,18 @@ class DynamoDBStorageHandler extends EntityStorageHandler {
   */
   getSchemas() {
     return this._registry.get('properties', 'schemaData', []).map(data => {
+      // Make sure we have schema
+      if (!data.hasOwnProperty('schema'))
+        return;
+
       let schema = data.schema;
+
       if (!schema.hasOwnProperty('TableName') || !schema.TableName)
         schema.TableName = this.getStorageTableName();
       else
         schema.TableName = this.getStorageTablePrefix() + schema.TableName;
       return schema;
-    });
+    }).filter(schema => schema != undefined);
   }
 }
 
