@@ -357,12 +357,7 @@ class DDBStorageBackend extends StorageBackend {
   * @param callback
   */
   select(variables, callback) {
-    var self = this;
-    var query = this.buildSelectQuery(variables);
-    self.executeSelectQuery(variables, query, (err, result) => {
-      if (err) callback(err);
-      else callback(null, result);
-    })
+    self.executeSelectQuery(this.buildSelectQuery(variables), query, callback);
   }
 
   /**
@@ -374,13 +369,13 @@ class DDBStorageBackend extends StorageBackend {
   */
   buildSelectQuery(variables) {
     var self = this;
-
     let query = variables.hasOwnProperty('query') ? variables.query : {};
 
-    // Fill basic values
-    if (!query.hasOwnProperty('TableName'))
+    // Check if we should fill table name
+    if (variables.hasOwnProperty('table'))
+      query.TableName = this.getStorageTablePrefix() + variables.table;
+    else if (!query.hasOwnProperty('TableName'))
       query.TableName = this.getStorageTableName();
-
     return query;
   }
 
