@@ -208,6 +208,16 @@ class DDBStorageBackend extends StorageBackend {
   }
 
   /**
+  * Build prefixed table name.
+  *
+  * @param tableName
+  * @return prefixed table name
+  */
+  prefixedTableName(tableName) {
+    return this.getStorageTablePrefix() + tableName;
+  }
+
+  /**
   * Return storege domain defined by storage handler.
   *
   * @return storage domain
@@ -373,7 +383,7 @@ class DDBStorageBackend extends StorageBackend {
 
     // Check if we should fill table name
     if (variables.hasOwnProperty('table'))
-      query.TableName = this.getStorageTablePrefix() + variables.table;
+      query.TableName = this.prefixedTableName(variables.table);
     else if (!query.hasOwnProperty('TableName'))
       query.TableName = this.getStorageTableName();
     return query;
