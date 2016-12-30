@@ -135,6 +135,7 @@ class DDBStorageBackend extends StorageBackend {
 
   /**
   * Delete data item.
+  * http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_DeleteItem.html
   *
   * @param table
   * @param key data
@@ -148,7 +149,7 @@ class DDBStorageBackend extends StorageBackend {
     // TODO: Handle throttling
     // TODO: Handle eventually consisency issues...
     this.getDynamoDBInstance().deleteItem(params, (err, result) => {
-      callback(err, this.decodeMap(result.Item));
+      callback(err, result);
     })
   }
 
