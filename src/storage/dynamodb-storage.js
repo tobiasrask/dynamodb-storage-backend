@@ -357,7 +357,7 @@ class DDBStorageBackend extends StorageBackend {
   * @param callback
   */
   select(variables, callback) {
-    this.executeSelectQuery(this.buildSelectQuery(variables), query, callback);
+    this.executeSelectQuery(variables, this.buildSelectQuery(variables), callback);
   }
 
   /**
