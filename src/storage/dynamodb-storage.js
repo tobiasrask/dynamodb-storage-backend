@@ -460,7 +460,7 @@ class DDBStorageBackend extends StorageBackend {
   }
 
   /**
-  * Returns list of DynamoDB tabls installed.
+  * Returns list of DynamoDB tables installed.
   *
   * @param callback
   */
