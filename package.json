@@ -1,6 +1,6 @@
 {
   "name": "dynamodb-storage-backend",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "description": "DynamoDB storage backend",
   "main": "lib/index.js",
   "directories": {
