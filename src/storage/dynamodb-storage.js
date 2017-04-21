@@ -81,7 +81,9 @@ class DDBStorageBackend extends StorageBackend {
   * @param caallback
   */
   saveEntityContainer(entityId, container, callback) {
-    this.saveDataItem(this.getStorageTableName(), Object.assign({}, entityId, container), callback);
+    this.saveDataItem(this.getStorageTableName(),
+      Object.assign({}, entityId, container),
+      callback);
   }
 
   /**
@@ -127,7 +129,7 @@ class DDBStorageBackend extends StorageBackend {
       Key: this.encodeMap(itemKey)
     }
     // TODO: Handle throttling
-    // TODO: Handle eventually consisency issues...
+    // TODO: Handle eventually consistency issues...
     this.getDynamoDBInstance().getItem(params, (err, result) => {
       callback(err, this.decodeMap(result.Item));
     })
@@ -147,7 +149,7 @@ class DDBStorageBackend extends StorageBackend {
       Key: this.encodeMap(itemKey)
     }
     // TODO: Handle throttling
-    // TODO: Handle eventually consisency issues...
+    // TODO: Handle eventually consistency issues...
     this.getDynamoDBInstance().deleteItem(params, (err, result) => {
       callback(err, result);
     })
@@ -368,7 +370,9 @@ class DDBStorageBackend extends StorageBackend {
   * @param callback
   */
   select(variables, callback) {
-    this.executeSelectQuery(variables, this.buildSelectQuery(variables), callback);
+    this.executeSelectQuery(variables,
+      this.buildSelectQuery(variables),
+      callback);
   }
 
   /**
