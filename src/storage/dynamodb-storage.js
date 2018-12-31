@@ -1,5 +1,5 @@
 import DomainMap from 'domain-map'
-import EntitySystem, { StorageBackend } from "entity-api"
+import EntitySystem, { StorageBackend } from 'entity-api'
 
 // TODO:
 // Table status, install, update, uninstall
@@ -20,16 +20,18 @@ class DDBStorageBackend extends StorageBackend {
   *     Dynamodb instance configued by client:
   *     http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB.html
   */
-  constructor(variables = {}) {
-    super(variables);
+  constructor(variables = {}) {
+    super(variables)
 
-    if (variables.hasOwnProperty('lockUpdates'))
-      this.setStorageLock(variables.lockUpdates);
+    if (variables.hasOwnProperty('lockUpdates')) {
+      this.setStorageLock(variables.lockUpdates)
+    }
 
-    if (!variables.hasOwnProperty('dynamodb'))
-      throw new Error("DynamoDB instance must be provided");
+    if (!variables.hasOwnProperty('dynamodb')) {
+      throw new Error('DynamoDB instance must be provided')
+    }
 
-    this._registry.set("properties", 'dynamodb', variables.dynamodb);
+    this._registry.set('properties', 'dynamodb', variables.dynamodb)
   }
 
 
@@ -39,20 +41,19 @@ class DDBStorageBackend extends StorageBackend {
   * @return instance
   */
   getDynamoDBInstance() {
-    return this._registry.get("properties", 'dynamodb');
+    return this._registry.get('properties', 'dynamodb')
   }
 
   /**
   * Load entity content container for entity data.
   *
-  * @param id
+  * @param id
   *   entity id data
   * @param callback
   */
   loadEntityContainer(entityId, callback) {
-    var self = this;
-    let tableName = this.getStorageTableName();
-    this.loadDataItem(tableName, entityId, callback);
+    let tableName = this.getStorageTableName()
+    this.loadDataItem(tableName, entityId, callback)
   }
 
   /**
@@ -61,14 +62,13 @@ class DDBStorageBackend extends StorageBackend {
   *
   * TODO: Support throttling
   *
-  * @param keys
+  * @param keys
   *   Array of entity ids.
   * @param callback
   */
   loadEntityContainers(entityIds, callback) {
-    var self = this;
-    let tableName = this.getStorageTableName();
-    this.loadDataItems(tableName, entityIds, callback);
+    let tableName = this.getStorageTableName()
+    this.loadDataItems(tableName, entityIds, callback)
   }
 
   /**
@@ -83,7 +83,7 @@ class DDBStorageBackend extends StorageBackend {
   saveEntityContainer(entityId, container, callback) {
     this.saveDataItem(this.getStorageTableName(),
       Object.assign({}, entityId, container),
-      callback);
+      callback)
   }
 
   /**
@@ -94,13 +94,13 @@ class DDBStorageBackend extends StorageBackend {
   * @param callback
   */
   deleteEntityContainer(entityId, callback) {
-    this.deleteDataItem(this.getStorageTableName(), entityId, callback);
+    this.deleteDataItem(this.getStorageTableName(), entityId, callback)
   }
 
   /**
   * Save data to DynamoDB.
   *
-  * @param table
+  * @param table
   * @param data
   * @param callback
   */
@@ -112,26 +112,26 @@ class DDBStorageBackend extends StorageBackend {
     this.getDynamoDBInstance().putItem(params, (err, result) => {
       // TODO: Handle throttling
       // TODO: Handle eventually consisency issues...
-      callback(err, result);
+      callback(err, result)
     })
   }
 
   /**
   * Load data items.
   *
-  * @param table
+  * @param table
   * @param key data
   * @param callback
   */
   loadDataItem(table, itemKey, callback) {
-    let params = {
+    const params = {
       TableName: table,
       Key: this.encodeMap(itemKey)
     }
     // TODO: Handle throttling
     // TODO: Handle eventually consistency issues...
     this.getDynamoDBInstance().getItem(params, (err, result) => {
-      callback(err, this.decodeMap(result.Item));
+      callback(err, this.decodeMap(result.Item))
     })
   }
 
@@ -144,70 +144,73 @@ class DDBStorageBackend extends StorageBackend {
   * @param callback
   */
   deleteDataItem(table, itemKey, callback) {
-    let params = {
+    const params = {
       TableName: table,
       Key: this.encodeMap(itemKey)
     }
     // TODO: Handle throttling
     // TODO: Handle eventually consistency issues...
     this.getDynamoDBInstance().deleteItem(params, (err, result) => {
-      callback(err, result);
+      callback(err, result)
     })
   }
 
   /**
   * Load batch of data items.
   *
-  * @param table
+  * @param table
   * @param ids
   *   Array of key data
   * @param callback
   *   Data collection
   */
   loadDataItems(table, itemKeys, callback) {
-    var self = this;
-    let result = DomainMap.createCollection({ strictKeyMode: false });
-    let countBatches = Math.ceil(itemKeys.length / maxItems);
-    let indexeDefinitions = this.getStorageIndexDefinitions();
-    let maxItems = 100;
-    let pointer = 0;
+    var self = this
+    let result = DomainMap.createCollection({ strictKeyMode: false })
+    let indexeDefinitions = this.getStorageIndexDefinitions()
+    let maxItems = 100
+    let pointer = 0
 
     function loadBatchData(keys) {
-      let params = { RequestItems: {} };
+      let params = { RequestItems: {} }
       params.RequestItems[table] = {
         Keys: keys
-      };
+      }
 
       self.getDynamoDBInstance().batchGetItem(params, (err, data) => {
-        if (err) return callback(err)
+        if (err) {
+          return callback(err)
+        }
 
-        Object.keys(data.Responses).forEach(tableName => {
-          if (!Array.isArray(data.Responses[tableName]))
-            return;
+        Object.keys(data.Responses).forEach((tableName) => {
+          if (!Array.isArray(data.Responses[tableName])) {
+            return
+          }
 
-          data.Responses[tableName].forEach(rowData => {
-            let data = self.decodeMap(rowData);
+          data.Responses[tableName].forEach((rowData) => {
+            let data = self.decodeMap(rowData)
             let entityId = self.getStorageHandler()
-              .extractEntityId(indexeDefinitions, data);
-            result.set(entityId, data);
+              .extractEntityId(indexeDefinitions, data)
+            result.set(entityId, data)
           })
-        });
-        getBatch();
-      });
+        })
+        getBatch()
+      })
     }
 
     function getBatch() {
-      let keys = [];
-      if (pointer == itemKeys.length)
-        return callback(null, result)
+      let keys = []
+      if (pointer == itemKeys.length) {
+        return callback(null, result)        
+      }
       while (pointer < itemKeys.length && keys.length < maxItems) {
-        keys.push(self.encodeMap(itemKeys[pointer]));
-        pointer++;
+        keys.push(self.encodeMap(itemKeys[pointer]))
+        pointer++
       }
       loadBatchData(keys)
     }
 
-    getBatch();
+    getBatch()
   }
 
   /**
@@ -217,7 +220,7 @@ class DDBStorageBackend extends StorageBackend {
   * @return prefixed table name
   */
   prefixedTableName(tableName) {
-    return this.getStorageTablePrefix() + tableName;
+    return this.getStorageTablePrefix() + tableName
   }
 
   /**
@@ -226,7 +229,7 @@ class DDBStorageBackend extends StorageBackend {
   * @return storage domain
   */
   getStorageTableName() {
-    return this.getStorageHandler().getStorageTableName();
+    return this.getStorageHandler().getStorageTableName()
   }
 
   /**
@@ -235,7 +238,7 @@ class DDBStorageBackend extends StorageBackend {
   * @return storage domain
   */
   getStorageTablePrefix() {
-    return this.getStorageHandler().getStorageTablePrefix();
+    return this.getStorageHandler().getStorageTablePrefix()
   }
 
   /**
@@ -244,7 +247,7 @@ class DDBStorageBackend extends StorageBackend {
   * @return storage domain
   */
   getStorageIndexDefinitions() {
-    return this.getStorageHandler().getStorageIndexDefinitions();
+    return this.getStorageHandler().getStorageIndexDefinitions()
   }
 
   /**
@@ -254,32 +257,36 @@ class DDBStorageBackend extends StorageBackend {
   * @return object
   */
   encodeMap(data) {
-    var self = this;
-    let result = null;
-    let build = {};
+    var self = this
+    let result = null
+    let build = {}
 
-    if (data == null)
-      return build;
+    if (data == null) {
+      return build
+    }
 
     if (Array.isArray(data)) {
-      build = [];
+      build = []
       for (let i = 0; i < data.length; i++) {
-        result = self.encodeMapValues(data[i]);
-        if (result != null)
+        result = self.encodeMapValues(data[i])
+        if (result != null) {
           build.push(result)
+        }
       }
     } else if (typeof data === 'object') {
-      Object.keys(data).forEach((key, index) => {
-        result = self.encodeMapValues(data[key]);
-        if (result != null)
-          build[key] = result;
-      });
+      Object.keys(data).forEach((key) => {
+        result = self.encodeMapValues(data[key])
+        if (result != null) {
+          build[key] = result
+        }
+      })
     } else {
-      result = self.encodeMapValues(data);
-      if (result != null)
-        build = result;
+      result = self.encodeMapValues(data)
+      if (result != null) {
+        build = result
+      }
     }
-    return build;
+    return build
   }
 
   /**
@@ -289,36 +296,37 @@ class DDBStorageBackend extends StorageBackend {
   * @return data
   */
   encodeMapValues(value) {
-    let result = null;
+    let result = null
 
-    if (value == null)
-      return result;
+    if (value == null) {
+      return result
+    }
 
     if (Array.isArray(value)) {
-      result = { 'L': this.encodeMap(value) };
+      result = { 'L': this.encodeMap(value) }
 
     } else if (typeof value === 'object') {
-      result = { 'M': this.encodeMap(value) };
+      result = { 'M': this.encodeMap(value) }
 
     } else {
-      let dynamoType = this.getDynamoType(value, 'valueType');
-      if (dynamoType == "BOOL") {
+      let dynamoType = this.getDynamoType(value, 'valueType')
+      if (dynamoType == 'BOOL') {
         result = {
           'BOOL': value ? true : false
-        };
-      } else if (dynamoType == "NULL") {
+        }
+      } else if (dynamoType == 'NULL') {
         result = {
           'NULL': value == null ? true : false
-        };
+        }
       } else {
-        let tmp = value.toString();
+        let tmp = value.toString()
         if (tmp != null && tmp.length > 0) {
-          result = {};
-          result[dynamoType] = tmp;
+          result = {}
+          result[dynamoType] = tmp
         }
       }
     }
-    return result;
+    return result
   }
 
   /**
@@ -328,38 +336,39 @@ class DDBStorageBackend extends StorageBackend {
   * @return object
   */
   decodeMap(data) {
-    var self = this;
-    var build = null;
+    var self = this
+    var build = null
 
-    if (data == null)
-      return build;
+    if (data == null) {
+      return build
+    }
 
     if (Array.isArray(data)) {
-      build = [];
+      build = []
       data.map(function(value) {
-        build.push(self.decodeMap(value));
-      });
+        build.push(self.decodeMap(value))
+      })
     } else if (typeof data === 'object') {
-      build = {};
-      Object.keys(data).forEach(function(key, index) {
-        if (key == 'M' || key == 'L') {
-          build = self.decodeMap(data[key]);
+      build = {}
+      Object.keys(data).forEach(function(key, _index) {
+        if (key == 'M' || key == 'L') {
+          build = self.decodeMap(data[key])
         } else if (key == 'S') {
-          build = data[key];
+          build = data[key]
         } else if (key == 'N') {
-          build = Number(data[key]);
+          build = Number(data[key])
         } else if (key == 'BOOL') {
-          build = Boolean(data[key]);
+          build = Boolean(data[key])
         } else if (key == 'NULL') {
-          build = data[key] ? null : null;
+          build = data[key] ? null : null
         } else {
-          build[key] = self.decodeMap(data[key]);
+          build[key] = self.decodeMap(data[key])
         }
-      });
+      })
     } else {
-      build = data;
+      build = data
     }
-    return build;
+    return build
   }
 
   /**
@@ -367,12 +376,12 @@ class DDBStorageBackend extends StorageBackend {
   * populate table name to match entity specs.
   *
   * @param variables
-  * @param callback
+  * @param callback
   */
   select(variables, callback) {
     this.executeSelectQuery(variables,
       this.buildSelectQuery(variables),
-      callback);
+      callback)
   }
 
   /**
@@ -383,15 +392,15 @@ class DDBStorageBackend extends StorageBackend {
   * @return params
   */
   buildSelectQuery(variables) {
-    var self = this;
-    let query = variables.hasOwnProperty('query') ? variables.query : {};
+    let query = variables.hasOwnProperty('query') ? variables.query : {}
 
     // Check if we should fill table name
-    if (variables.hasOwnProperty('table'))
-      query.TableName = this.prefixedTableName(variables.table);
-    else if (!query.hasOwnProperty('TableName'))
-      query.TableName = this.getStorageTableName();
-    return query;
+    if (variables.hasOwnProperty('table')) {
+      query.TableName = this.prefixedTableName(variables.table)
+    } else if (!query.hasOwnProperty('TableName')) {
+      query.TableName = this.getStorageTableName()
+    }
+    return query
   }
 
   /**
@@ -399,27 +408,29 @@ class DDBStorageBackend extends StorageBackend {
   *
   * @param variables
   * @param query
-  * @param callback
+  * @param callback
   */
   executeSelectQuery(variables, query, callback) {
-    var self = this;
-    let dynamodb = this._registry.get("properties", 'dynamodb');
+    var self = this
+    let dynamodb = this._registry.get('properties', 'dynamodb')
     var resultHandler = (err, data) =>  {
-      if (err)
-        return callback(err);
-      data.values = self.decodeMap(data.Items);
-      callback(null, data);
-    };
+      if (err) {
+        return callback(err)
+      }
+      data.values = self.decodeMap(data.Items)
+      callback(null, data)
+    }
 
-    if (variables.hasOwnProperty('debug') && variables.debug)
-      EntitySystem.log("DDBStorageBackend", JSON.stringify(query));
+    if (variables.hasOwnProperty('debug') && variables.debug) {
+      EntitySystem.log('DDBStorageBackend', JSON.stringify(query))
+    }
 
     if (variables.method == 'scan') {
-      dynamodb.scan(query, resultHandler);
+      dynamodb.scan(query, resultHandler)
     } else if (variables.method == 'query') {
-      dynamodb.query(query, resultHandler);
+      dynamodb.query(query, resultHandler)
     } else {
-      callback(new Error(`Unknown method: ${variables.method}`));
+      callback(new Error(`Unknown method: ${variables.method}`))
     }
   }
 
@@ -430,12 +441,12 @@ class DDBStorageBackend extends StorageBackend {
   * @param value
   *   Primitive data type name or value, based on scope
   * @param type
-  *   Possible values are "primitiveType" (default) or "valueType"
+  *   Possible values are 'primitiveType' (default) or 'valueType'
   *
   * @return dynamo type or false if match not found
   */
-  getDynamoType(value, type = "primitiveType") {
-    let dynamoType = false;
+  getDynamoType(value, type = 'primitiveType') {
+    let dynamoType = false
     let DynamoTypeMap = {
       'string': 'S',
       'number': 'N',
@@ -443,37 +454,40 @@ class DDBStorageBackend extends StorageBackend {
       'null': 'NULL',
       'array': 'L',
       'object': 'M'
-    };
+    }
     let primitiveMap = {
       'integer': 'number',
       'text': 'string',
       'text_map': 'object',
       'text_list': 'array',
       'image': 'array'
-    };
+    }
 
-    if (type == "primitiveType" && primitiveMap.hasOwnProperty(value)) {
-      dynamoType = primitiveMap[value];
+    if (type == 'primitiveType' && primitiveMap.hasOwnProperty(value)) {
+      dynamoType = primitiveMap[value]
 
-    } else if (type == "valueType") {
-      dynamoType = typeof value;
+    } else if (type == 'valueType') {
+      dynamoType = typeof value
     }
 
     return dynamoType && DynamoTypeMap.hasOwnProperty(dynamoType) ?
-      DynamoTypeMap[dynamoType] : false;
+      DynamoTypeMap[dynamoType] : false
   }
 
   /**
   * Returns list of DynamoDB tables installed.
   *
-  * @param callback
+  * @param callback
   */
   getDynamoDBTables(callback) {
-    let dynamodb = this._registry.get("properties", 'dynamodb');
+    let dynamodb = this._registry.get('properties', 'dynamodb')
     dynamodb.listTables({}, function(err, data) {
-      if (err) callback(err)
-      else callback(null, data);
-    });
+      if (err) {
+        callback(err)
+      } else {
+        callback(null, data)
+      }
+    })
   }
 
   /**
@@ -484,164 +498,181 @@ class DDBStorageBackend extends StorageBackend {
   */
   checkStorageTableStatus(tableName, callback) {
     this.getDynamoDBTables((err, result) => {
-      if (err)
-        return callback(err);
-      else if (result.TableNames.find(item => item == tableName))
-        callback(null, true);
-      else
-        callback(null, false);
+      if (err) {
+        return callback(err)
+      } else if (result.TableNames.find((item) => item == tableName)) {
+        callback(null, true)
+      } else {
+        callback(null, false)
+      }
     })
   }
 
   /**
   * Install schema
   *
-  * @param scema
+  * @param scema
   *   Install one or more schemas
   * @param options
   * @param callback
   */
   installSchemas(schemas, options, callback) {
-    let self = this;
-    let counter = schemas.length;
-    let errors = false;
+    let self = this
+    let counter = schemas.length
+    let errors = false
 
-    if (!counter)
-      return callback(null);
+    if (!counter) {
+      return callback(null)
+    }
 
-    schemas.forEach(schema => {
-      EntitySystem.log("DDBStorageBackend", `Creating table: ${schema.TableName}`);
+    schemas.forEach((schema) => {
+      EntitySystem.log('DDBStorageBackend', `Creating table: ${schema.TableName}`)
 
       self.installSchema(schema, options, (err, succeed) => {
         if (err) {
-          EntitySystem.log("DDBStorageBackend", err.toString(), 'error');
-          errors = true;
+          EntitySystem.log('DDBStorageBackend', err.toString(), 'error')
+          errors = true
         } else if (succeed) {
-          EntitySystem.log("DDBStorageBackend", `Table created: ${schema.TableName}`);
+          EntitySystem.log('DDBStorageBackend', `Table created: ${schema.TableName}`)
         } else {
-          EntitySystem.log("DDBStorageBackend", `Table not created, already exists: ${schema.TableName}`);
+          EntitySystem.log('DDBStorageBackend', `Table not created, already exists: ${schema.TableName}`)
         }
 
-        counter--;
-        if (counter > 0)
-          return;
-        else if (errors)
-          callback(new Error("There was an error when installing schemas."));
-        else
-          callback(null);
-      });
-    });
+        counter--
+        if (counter > 0) {
+          return
+        } else if (errors) {
+          callback(new Error('There was an error when installing schemas.'))
+        } else {
+          callback(null)
+        }
+      })
+    })
   }
 
   /**
   * Install schema.
   *
-  * @param schema
+  * @param schema
   * @param options
   * @param callback
   *   Provides errors and creation status
   */
   installSchema(schema, options, callback) {
-    if (!schema.hasOwnProperty('TableName'))
-      return callback(new Error("Missing required 'TableName' field"));
+    if (!schema.hasOwnProperty('TableName')) {
+      return callback(new Error('Missing required "TableName" field'))
+    }
 
     this.checkStorageTableStatus(schema.TableName, (err, tableExists) => {
-      if (err)
-        return callback(err);
+      if (err) {
+        return callback(err)
+      }
 
       // Skip table creation if table already exists
-      if (tableExists)
-        return callback(null, false);
+      if (tableExists) {
+        return callback(null, false)
+      }
 
-      let dynamodb = this._registry.get("properties", 'dynamodb');
+      const dynamodb = this._registry.get('properties', 'dynamodb')
 
-      dynamodb.createTable(schema, (err, data) => {
-        if (err) callback(err);
-        else callback(null, true)
-      });
-    });
+      dynamodb.createTable(schema, (err, _data) => {
+        if (err) {
+          callback(err)
+        } else {
+          callback(null, true)
+        }
+      })
+    })
   }
 
   /**
   * Update schema
   *
-  * @param scema
+  * @param scema
   *   Install one or more schemas
   * @param options
   * @param callback
   */
   updateSchemas(schemas, options, callback) {
-    callback(null);
+    callback(null)
   }
 
   /**
   * Uninstall schema
   *
-  * @param scema
+  * @param scema
   *   Install one or more schemas
   * @param options
   * @param callback
   */
   uninstallSchemas(schemas, options, callback) {
-    let self = this;
-    let counter = schemas.length;
-    let errors = false;
+    let self = this
+    let counter = schemas.length
+    let errors = false
 
-    if (!counter)
-      return callback(null);
+    if (!counter) {
+      return callback(null)
+    }
 
-    schemas.forEach(schema => {
-      EntitySystem.log("DDBStorageBackend", `Deleting table: ${schema.TableName}`);
+    schemas.forEach((schema) => {
+      EntitySystem.log('DDBStorageBackend', `Deleting table: ${schema.TableName}`)
 
       self.uninstallSchema(schema, options, (err, succeed) => {
         if (err) {
-          EntitySystem.log("DDBStorageBackend", err.toString(), 'error');
-          errors = true;
+          EntitySystem.log('DDBStorageBackend', err.toString(), 'error')
+          errors = true
         } else if (succeed) {
-          EntitySystem.log("DDBStorageBackend", `Table deleted: ${schema.TableName}`);
+          EntitySystem.log('DDBStorageBackend', `Table deleted: ${schema.TableName}`)
         } else {
-          EntitySystem.log("DDBStorageBackend", `Table not deleted, might be it didn't exists: ${schema.TableName}`);
+          EntitySystem.log('DDBStorageBackend', `Table not deleted, might be it didn't exists: ${schema.TableName}`)
         }
 
-        counter--;
-        if (counter > 0)
-          return;
-        else if (errors)
-          callback(new Error("There was an error when uninstalling schemas."));
-        else
-          callback(null);
-      });
-    });
+        counter--
+        if (counter > 0) {
+          return
+        } else if (errors) {
+          callback(new Error('There was an error when uninstalling schemas.'))
+        } else {
+          callback(null)
+        }
+      })
+    })
   }
 
   /**
   * Uninstall schema.
   *
-  * @param schema
+  * @param schema
   * @param options
   * @param callback
   *   Provides errors and creation status
   */
   uninstallSchema(schema, options, callback) {
-    if (!schema.hasOwnProperty('TableName'))
-      return callback(new Error("Missing required 'TableName' field"));
+    if (!schema.hasOwnProperty('TableName')) {
+      return callback(new Error('Missing required "TableName" field'))
+    }
 
     this.checkStorageTableStatus(schema.TableName, (err, tableExists) => {
-      if (err)
-        return callback(err);
+      if (err) {
+        return callback(err)
+      }
 
       // Skip table deletion if it doesn't exists
-      if (!tableExists)
-        return callback(null, false);
+      if (!tableExists) {
+        return callback(null, false)
+      }
 
-      let dynamodb = this._registry.get("properties", 'dynamodb');
+      let dynamodb = this._registry.get('properties', 'dynamodb')
 
-      dynamodb.deleteTable({ TableName: schema.TableName }, (err, data) => {
-        if (err) callback(err);
-        else callback(null, true)
-      });
-    });
+      dynamodb.deleteTable({ TableName: schema.TableName }, (err, _data) => {
+        if (err) {
+          callback(err)
+        } else {
+          callback(null, true)
+        }
+      })
+    })
   }
 }
 
-export default DDBStorageBackend;
+export default DDBStorageBackend

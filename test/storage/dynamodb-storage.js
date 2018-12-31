@@ -1,54 +1,58 @@
-import DynamoDBStorageBackend from "./../../src/index"
-import { EntityStorageHandler } from "entity-api"
-import assert from "assert"
+import DynamoDBStorageBackend from './../../src/index'
 import equal from 'deep-equal'
-import util from 'util'
-import AWS from 'aws-sdk'
+import { EntityStorageHandler } from 'entity-api'
+
 
 describe('DynamoDB storage backend', () => {
 
   describe('Invalid construction', () => {
-    it('It should throw error if dynamodb instance is not provided', done => {
+    it('It should throw error if dynamodb instance is not provided', (done) => {
       try {
-        let backend = new DynamoDBStorageBackend();
+        const backend = new DynamoDBStorageBackend()
+        if (backend) {
+          done(new Error('Backend was provided with missing parameters'))
+        }
+        done(new Error('It didn\'t throw error when DynamoDB instance is missing'))
       } catch (err) {
-        return done();
+        return done()
       }
-      done(new Error("It dint' throw error when DynamoDB instance is missing"));
     })
-  });
+  })
 
   describe('Construction', () => {
-    it('Should construct with without errors', done => {
+    it('Should construct with without errors', (done) => {
       class DynamoDB {}
-      let backend = new DynamoDBStorageBackend({
+      const backend = new DynamoDBStorageBackend({
         dynamodb: new DynamoDB()
-      });
-      done();
+      })
+      if (!backend) {
+        done(new Error('No instance'))
+      }
+      done()
     })
-  });
+  })
 
   describe('Data encoding & decoding', () => {
-    it('It should encode and decode json data do DynamoDB format', done => {
+    it('It should encode and decode json data do DynamoDB format', (done) => {
       class DynamoDB {}
       let backend = new DynamoDBStorageBackend({
         dynamodb: new DynamoDB()
-      });
+      })
 
       var sourceData = {
-        string_field: "stringValue",
-        array_field: [1, "stringValue", 3, true],
+        string_field: 'stringValue',
+        array_field: [1, 'stringValue', 3, true],
         boolean_field: true,
         null_field: null,
         object_field: {
           a: 1,
-          b: "stringValue",
-          c: [1,2,"stringValue"],
+          b: 'stringValue',
+          c: [1,2,'stringValue'],
           d: {
-            a: "stringValue"
+            a: 'stringValue'
           }
         }
-      };
+      }
 
       const expectedData = {
         string_field: {
@@ -85,67 +89,74 @@ describe('DynamoDB storage backend', () => {
             }
           }
         }
-      };
+      }
 
-      let encodedData = backend.encodeMap(sourceData);
+      let encodedData = backend.encodeMap(sourceData)
 
-      if (!equal(expectedData, encodedData))
-        return done(new Error("DynamoDB encoded data was not expected"));
+      if (!equal(expectedData, encodedData)) {
+        return done(new Error('DynamoDB encoded data was not expected'))
+      }
 
-      let decodedData = backend.decodeMap(encodedData);
+      let decodedData = backend.decodeMap(encodedData)
 
-      // Dynamodb doesn't support null values, so it removes them
-      delete sourceData['null_field'];
+      // Dynamodb doesn\'t support null values, so it removes them
+      delete sourceData['null_field']
 
-      if (!equal(sourceData, decodedData))
-        return done(new Error("DynamoDB decoded data was not expected"));
+      if (!equal(sourceData, decodedData)) {
+        return done(new Error('DynamoDB decoded data was not expected'))
+      }
 
-      done();
+      done()
     })
-  });
+  })
 
   describe('loadEntityContainers', () => {
-    it('Should load items as patch', done => {
-      let entityTypeId = 'test';
-
+    it('Should load items as patch', (done) => {
       class DynamoDB {
         batchGetItem(params, callback) {
-          let data = { Responses: {} };
-          Object.keys(params.RequestItems).forEach(tableName => {
+          let data = { Responses: {} }
+          Object.keys(params.RequestItems).forEach((tableName) => {
             data.Responses[tableName] = [
               {
-                "entity_id": 123,
-                "name": "DynamoDB",
-                "age": "31"
+                'entity_id': 123,
+                'name': 'DynamoDB',
+                'age': '31'
               }
-            ];
+            ]
             params.RequestItems[tableName]
-          });
-          callback(null, data);
-        }
-      };
-
-      let backend = new DynamoDBStorageBackend({
-        dynamodb: new DynamoDB()
-      });
-
-      class CustomHandler extends EntityStorageHandler {
-        getStorageIndexDefinitions() {
-          return [{ fieldName: "entity_id" }];
+          })
+          callback(null, data)
         }
       }
 
-      let handler = new CustomHandler({
+      let backend = new DynamoDBStorageBackend({
+        dynamodb: new DynamoDB()
+      })
+
+ 
+      const entityTypeId = 'test'
+      class CustomHandler extends EntityStorageHandler {
+        getStorageIndexDefinitions() {
+          return [{ fieldName: 'entity_id' }]
+        }
+      }
+
+      const handler = new CustomHandler({
         entityTypeId: entityTypeId,
         storage: backend
-      });
+      })
 
-      backend.loadEntityContainers([{ entity_id: 123 }], (err, result) => {
-        if (err)
-          return done(err);
-        done();
-      });
+      if (!handler) {
+        return done(new Error('Handler is not provided'))
+      }
+
+      backend.loadEntityContainers([{ entity_id: 123 }], (err, _result) => {
+        if (err) {
+          return done(err)
+        }
+        done()
+      })
     })
-  });
+  })
 
-});
+})
