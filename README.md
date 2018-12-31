@@ -11,8 +11,11 @@ Using [npm](https://www.npmjs.com/):
 
 ```js
 
-import { DynamoDBStorageBackend, DynamoDBStorageHandler } from 'dynamodb-storage-backend'
 import AWS from 'aws-sdk'
+import {
+  DynamoDBStorageBackend,
+  DynamoDBStorageHandler
+  } from 'dynamodb-storage-backend'
 
 AWS.config.update({
   region: 'eu-west1'
