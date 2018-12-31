@@ -12,6 +12,7 @@ describe('Storage backend methods', () => {
       AWS.config.update({
         region: 'eu-west1'
       })
+
       let backend = new DynamoDBStorageBackend({
         dynamodb: new AWS.DynamoDB({
           endpoint: new AWS.Endpoint('http://localhost:8000')
