@@ -156,7 +156,6 @@ describe('DynamoDB schema maneuvers', () => {
         })
       })
 
-
       const entityTypeId = 'test'
       const handler = new CustomStorageHandler({
         entityTypeId: entityTypeId,

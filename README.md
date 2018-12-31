@@ -21,18 +21,53 @@ AWS.config.update({
   region: 'eu-west1'
 })
 
+const DB_SCHEMAS = [
+  {
+    schema:  {
+      TableName: 'message',
+      AttributeDefinitions: [
+        {
+          AttributeName: 'id',
+          AttributeType: 'S'
+        }
+      ],
+      KeySchema: [
+        {
+          AttributeName: 'id',
+          KeyType: 'HASH'
+        }
+      ],
+      ProvisionedThroughput:  {
+        ReadCapacityUnits: '1',
+        WriteCapacityUnits: '1'
+      }
+    }
+  }
+]
+
 const backend = new DynamoDBStorageBackend({
     dynamodb: new AWS.DynamoDB({
-    // Dynamodb endpoint to be used. This uses Dynamodb loal
-    endpoint: new AWS.Endpoint('http://localhost:8000')
-  })
+      // Dynamodb endpoint to be used. This uses Dynamodb local
+      endpoint: new AWS.Endpoint('http://localhost:8000')
+    })
 })
 
-const handler = new DynamoDBStorageHandler({
-  entityTypeId: 'message',
-  tablePrefix: 'entity_',
-  storage: backend
-})
+class MessageEntityType extends EntityType {
+
+  constructor(variables = {}) {
+    variables.entityTypeId = 'message'
+    variables.entityClass = MessageEntity
+    variables.handlers = {
+      storage: new DynamoDBStorageHandler({
+        tablePrefix: 'entity_',
+        storage: backend,
+        schemaData: DB_SCHEMAS
+      }),
+      view: new EntityViewHandler(variables),
+    }
+    super(variables)
+  }
+}
 
 ```
 
